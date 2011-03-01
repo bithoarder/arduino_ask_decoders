@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+import serial
+import termios
+import select
+import sys
+
+dev, speed = sys.argv[1:]
+
+ser = serial.Serial(dev, speed, timeout=0.0)
+
+old = termios.tcgetattr(sys.stdin.fileno())
+try:
+  new = termios.tcgetattr(sys.stdin.fileno())
+  new[3] = new[3] & ~termios.ICANON & ~termios.ECHO
+  new[6][termios.VMIN] = 1
+  new[6][termios.VTIME] = 0
+  termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, new)
+
+  while True:
+    res = select.select([sys.stdin, ser], [], [], 1.0)
+    if ser in res[0]:
+      data = ser.read(4096)
+      sys.stdout.write(data)
+      sys.stdout.flush()
+    if sys.stdin in res[0]:
+      data = sys.stdin.read(1)
+      ser.write(data)
+finally:
+  termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, old)
+

@@ -1,0 +1,5 @@
+*~
+/arduino-decoder/build/
+/couchapp/push
+/couchapp/.couchapprc
+

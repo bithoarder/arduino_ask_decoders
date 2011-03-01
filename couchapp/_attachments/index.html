@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test</title>
+</head>
+<body>
+  <a id="google" href="">Activate with Google PowerMeter</a>
+</body>
+
+<script src="vendor/couchapp/loader.js"></script>
+<script type="text/javascript" charset="utf-8">
+url = 'https://www.google.com/powermeter/device/activate?mfg=Norgo&model=NGE101&did=1&cvars=1&dvars=0&snonce=1234&rurl='
+url += window.location.href + '/../_update/google_ret/cfg';
+$('#google').attr('href', url);
+</script>
+
+</html>
+

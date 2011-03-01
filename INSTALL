@@ -1,0 +1,115 @@
+===============================================================================
+= Prerequisits
+===============================================================================
+
+* gcc for avr
+* avrdude
+* python
+* python-serial
+* python-couchdb
+* CouchApp, downloaded from http://couchapp.org
+* Arduino 
+* Arduino Ethernet shield V5
+* 433 MHz ASK receiver connected to pin 2
+* Running instance of CouchDB.
+
+To install the avr and python utilities on Debian/Ubuntu:
+sudo apt-get install gcc-avr avrdude python-serial python-couchdb
+
+I have only tested this on Linux.
+
+===============================================================================
+= Installation overview:
+===============================================================================
+
+1) build and upload the arduino code.
+2) push the couchapp to a couchdb.
+3) register the device with google powermeter.
+4) periodically run upload_to_google_powermeter.py.
+
+===============================================================================
+= build and upload the arduino code.
+===============================================================================
+
+First check config.h and change at least NET_ADDR, NET_MAC and COUCHDB_ADDR.
+
+> cd arduino-decoder
+> make upload SERPORT=/dev/ttyACM0 SERSEED=115200
+
+Set SERPORT and SERSEED to match your arduino.
+
+To verify that the arduino code can receive data from the 433 MHz receiver it's
+possible to tail the output from the arduino using:
+> make tail SERPORT=/dev/ttyACM0
+If everything is running, it should print:
+> GO
+when a Norgo NGE wireless frame is received, the arduino will print something like:
+> Count: 1570531 W
+> CouchDB connecting
+> CouchDB connected, sending doc
+> CouchDB connection closed
+> RealTime: 833 W
+> CouchDB connecting
+> CouchDB connected, sending doc
+> CouchDB connection closed
+If you don't see any of these messages, you can enable additional debug output
+from the arduino by pressing "d" while running "make tail".
+When pressing "d", the arduino should print "g_printRecvBits=1", and it will then
+start printing the raw data it gets from the 433 MHz radio:
+> Recv 0 560
+> Recv 1 900
+> Recv 0 1052
+> Recv 1 408
+
+===============================================================================
+= push the couchapp to a couchdb.
+===============================================================================
+
+A easy way to install CouchDB is to use the CouchOne installer found at
+http://www.couchone.com/get#ubuntu
+
+To enable the Arduino to access the the CouchDB change bind_address in 
+etc/couchdb/default.ini to
+bind_address = 0.0.0.0
+
+WARNING: This projects does not yet support CouchDB authentication, so it's
+important that the CouchDB is protected from evil-doers by a firewall.
+
+When you have the database running on localhost, continue with:
+
+> cd couchapp
+> couchapp push http://localhost:5984/ask
+
+This will upload the needed html and javascript to the database.
+If you go to http://localhost:5984/_utils/database.html?ask you should, after a 
+few minutes, see documents uploaded by the arduino. If the database is empty, 
+go back to step 1, and make sure the arduino is able receive and decode data.
+
+===============================================================================
+= register the device with google powermeter.
+===============================================================================
+
+Go to http://localhost:5984/ask/_design/couchapp/index.html and click on the
+"Activate with Google PowerMeter" link.
+Follow the onscreen directions. When you have activated the device, you should
+see a webpage saying "success".
+
+If you now go to http://localhost:5984/_utils/document.html?ask/cfg, you should 
+see a CouchDB document with the registered hash, path and authentication token.
+
+When we have pushed some data to google, the usage graph can be seen here:
+http://www.google.com/powermeter/site/recent
+
+===============================================================================
+= periodically run upload_to_google_powermeter.py.
+===============================================================================
+
+To upload new power use data to google powermeter, run the script:
+./tools/upload_to_google_powermeter.py
+Google, in there getting started document (http://code.google.com/apis/powermeter/docs/getting_started.html),
+they notes that devices should only upload new data every 10 minutes.
+One way to archive this is to make a cronjob for the upload script;
+run crontab -e and add this line:
+*/10 * * * * cd WHERE_CODE_IS_LOCATED && ./tools/upload_to_google_powermeter.py
+fix WHERE_CODE_IS_LOCATED :)
+
